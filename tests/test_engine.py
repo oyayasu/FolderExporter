@@ -66,7 +66,7 @@ def test_formats_and_transparency(tmp_path, format, ext):
             assert im.convert("RGBA").getpixel((0, 0))[3] == 0
         else:
             assert im.mode == "RGB"
-            assert im.getpixel((0, 0)) == (255, 255, 255)
+            assert all(channel >= 245 for channel in im.getpixel((0, 0)))  # JPEG é com perdas
 
 def test_hidden_restore_and_isolation(tmp_path):
     first = Group("A")
