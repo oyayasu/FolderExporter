@@ -27,6 +27,7 @@ class Options:
     scale: int = 100
     quality: int = 90
     matte: str = "white"
+    white_background: bool = False  # opção explícita para PNG/WebP/TIFF
     prefix: str = "imagem"
 
 @dataclass(frozen=True)
@@ -54,10 +55,28 @@ def load_psd(path: Path) -> Any:
     except Exception as exc:
         raise ExportError(f"Não foi possível abrir o PSD/PSB: {exc}") from exc
 
+def load_project(path: Path) -> Any:
+    """Apenas lê o arquivo de origem. Nunca chama save() no PSD/CLIP."""
+    path = Path(path)
+    if path.suffix.lower() == ".clip":
+        from clip_support import open_clip
+        return open_clip(path)
+    if path.suffix.lower() in (".psd", ".psb"):
+        return load_psd(path)
+    raise ExportError("Formato de origem inválido. Use PSD, PSB ou CLIP.")
+
 def list_top_level_groups(psd: Any) -> list[Folder]:
+    if getattr(psd, "is_clip", False):
+        from clip_support import top_groups
+        return [
+            Folder(i, name, index, visible)
+            for i, (index, name, visible) in enumerate(top_groups(psd))
+        ]
+    # psd-tools itera de BAIXO para CIMA; Clip Studio/Photoshop mostram de CIMA para BAIXO.
+    # A primeira pasta na interface precisa ser o arquivo 001.
     return [
         Folder(i, str(layer.name), layer, bool(getattr(layer, "visible", True)))
-        for i, layer in enumerate(psd)
+        for i, layer in enumerate(reversed(psd))
         if getattr(layer, "kind", "") in {"group", "artboard"}
     ]
 
@@ -98,6 +117,9 @@ def build_export_plan(folders: Iterable[Folder], destination: Path, options: Opt
     ]
 
 def render_group(psd: Any, group: Any, crop: bool) -> Image.Image:
+    if getattr(psd, "is_clip", False):
+        from clip_support import render_folder
+        return render_folder(psd, int(group), crop)
     width, height = int(psd.width), int(psd.height)
     if width <= 0 or height <= 0:
         raise ExportError("O documento tem dimensões inválidas.")
@@ -143,6 +165,12 @@ def prepare_image(image: Image.Image, options: Options) -> Image.Image:
         color = (0, 0, 0) if options.matte == "black" else (255, 255, 255)
         background = Image.new("RGB", image.size, color)
         background.paste(image, mask=image.getchannel("A"))
+        image.close()
+        image = background
+    elif options.white_background:
+        # Branco opcional: PNG/WebP/TIFF ficam opacos; se desmarcado, preservam alfa.
+        background = Image.new("RGBA", image.size, (255, 255, 255, 255))
+        background.alpha_composite(image)
         image.close()
         image = background
     return image
