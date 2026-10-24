@@ -46,20 +46,25 @@ jobs:
         run: python -m pytest -q tests
       - name: Build standalone application
         run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name FolderExporter --collect-all psd_tools app.py
-      - name: Package Windows application
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: Compress-Archive -Path dist/FolderExporter -DestinationPath "${{ matrix.artifact }}.zip"
-      - name: Package macOS application
+      - name: Create macOS disk image
         if: matrix.platform == 'macos'
         shell: bash
         run: |
           test -d "dist/FolderExporter.app"
-          ditto -c -k --sequesterRsrc --keepParent "dist/FolderExporter.app" "${{ matrix.artifact }}.zip"
-      - name: Upload downloadable application
+          hdiutil create -volname "FolderExporter" -srcfolder "dist/FolderExporter.app" -ov -format UDZO "${{ matrix.artifact }}.dmg"
+      - name: Upload Windows application directory
+        if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}.zip
+          path: dist/FolderExporter/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload macOS disk image
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.dmg
           if-no-files-found: error
           retention-days: 30
