@@ -240,7 +240,7 @@ class Application(tk.Tk):
         self.info_text.set(f"{len(self.selected)} de {len(self.folders)} selecionadas")
         self._refresh_preview()
 
-    def _options(self):
+    def _export_options(self):
         return Options(
             naming=NAMING[self.naming_text.get()],
             format=self.format_text.get(),
@@ -271,7 +271,7 @@ class Application(tk.Tk):
         try:
             chosen = [g for i, g in enumerate(self.folders) if i in self.selected]
             dest = self._destination()
-            items = build_export_plan(chosen, dest, self._options())
+            items = build_export_plan(chosen, dest, self._export_options())
             names = [p.name for _, p in items[:3]]
             if len(items) > 3:
                 names.append(f"... e mais {len(items)-3} arquivos")
@@ -295,7 +295,7 @@ class Application(tk.Tk):
                 destination.mkdir(parents=False, exist_ok=True)
             if not destination.is_dir():
                 raise ValueError("A pasta de destino não existe.")
-            options = self._options()
+            options = self._export_options()
         except (ValueError, OSError, KeyError) as exc:
             messagebox.showwarning("Verifique as opções", str(exc))
             return
