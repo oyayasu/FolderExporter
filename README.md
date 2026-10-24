@@ -16,7 +16,22 @@ Exporta cada pasta principal de um PSD/PSB como imagem individual, preservando a
 
 ## Baixar
 
-Abra **Actions → Build Windows and macOS → execução mais recente → Artifacts** e baixe a versão do seu sistema. O build do Windows gera uma pasta com `FolderExporter.exe`; o do macOS gera `FolderExporter.app` num ZIP. No macOS, apps não assinados podem precisar ser autorizados em Ajustes do Sistema > Privacidade e Segurança.
+Abra **Actions → Build Windows and macOS → última execução verde → Artifacts**. As versões do programa **não exigem instalar Python**.
+
+### Windows 10/11
+1. Baixe `FolderExporter-Windows-x64` (um único arquivo ZIP do GitHub).
+2. Extraia o ZIP **completo** para uma pasta.
+3. Execute `FolderExporter.exe` e mantenha a pasta `_internal` ao lado dele. Não execute o EXE de dentro do ZIP.
+
+### macOS Intel ou Apple Silicon
+1. Baixe o artifact de arquitetura correspondente. O ZIP do GitHub contém um arquivo `.dmg`, e **não outro ZIP**.
+2. Extraia o ZIP, abra o `.dmg` e copie `FolderExporter.app` para Aplicativos.
+3. O aplicativo ainda não é assinado/notarizado. Caso o macOS bloqueie a abertura, confira **Ajustes do Sistema → Privacidade e Segurança**, em vez de desativar o Gatekeeper globalmente.
+
+### Importante
+- Arquivos existentes não são substituídos; nomes repetidos ganham sufixos ` - 2`, ` - 3` etc.
+- O GitHub testa o núcleo de exportação e verifica a inicialização da janela no Windows.
+- Ainda é necessário validar o resultado com PSDs reais exportados pelo Clip Studio.
 
 ## Limitação
 
