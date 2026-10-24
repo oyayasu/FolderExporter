@@ -1,17 +1,19 @@
 # FolderExporter
 
-Exporta cada pasta principal de um PSD/PSB como imagem individual, preservando a transparência e sem modificar o projeto.
+Exporta cada pasta principal de um **PSD/PSB** ou **CLIP** como imagem individual, na ordem visual de cima para baixo, sem modificar o projeto original.
 
 **Windows e macOS:** a aba [Actions](https://github.com/oyayasu/FolderExporter/actions) gera os aplicativos independentes. Quem usa o aplicativo **não precisa instalar Python**.
 
 ## Recursos
 
-- Cada grupo principal vira um arquivo independente, incluindo grupos ocultos.
+- Cada grupo principal vira um arquivo independente, incluindo grupos ocultos, na **mesma ordem visual do Clip Studio**: a pasta de cima é sempre a imagem 001.
+- Importação direta de arquivos `.clip` em modo **experimental** para pastas de camadas raster normais, usando `clipparse`.
 - Formatos: PNG, WebP, TIFF e JPEG.
 - Nomes originais, numeração, ou combinação dos dois.
 - Nomes repetidos recebem ` - 2`, ` - 3`, etc.; arquivos anteriores nunca são sobrescritos.
 - Exportar na pasta original, em subpasta própria ou em destino escolhido.
 - Tela completa ou recorte do conteúdo, escala, qualidade e fundo de JPEG.
+- **Fundo branco opcional** para PNG, WebP e TIFF: desligado por padrão, mantendo transparência.
 - Seleção de grupos, progresso e cancelamento.
 
 ## Baixar
@@ -30,12 +32,14 @@ Abra **Actions → Build Windows and macOS → última execução verde → Arti
 
 ### Importante
 - Arquivos existentes não são substituídos; nomes repetidos ganham sufixos ` - 2`, ` - 3` etc.
+- **Segurança da origem:** o aplicativo apenas lê os projetos. Não chama métodos `save()` de PSD nem instancia `ClipWriter`; grava exclusivamente arquivos de saída e, quando escolhida, a pasta de saída.
+- Na importação direta `.clip`, máscaras de pasta, recortes, ajustes e modos avançados de mesclagem são recusados com erro de exportação em vez de criar imagem sabidamente incompleta. Para esses casos, use PSD.
 - O GitHub testa o núcleo de exportação e verifica a inicialização da janela no Windows.
 - Ainda é necessário validar o resultado com PSDs reais exportados pelo Clip Studio.
 
 ## Limitação
 
-O motor usa `psd-tools` para renderizar grupos PSD. Alguns filtros, máscaras e modos de mesclagem exclusivos do Photoshop/Clip Studio podem não ser reproduzidos perfeitamente. Valide com seu arquivo antes de excluir qualquer exportação original. A entrada direta `.clip` ainda não é suportada.
+O motor PSD usa `psd-tools` para renderizar grupos. Alguns filtros, máscaras e modos de mesclagem exclusivos do Photoshop/Clip Studio podem não ser reproduzidos perfeitamente. O leitor CLIP direto usa `clipparse==0.2.0` em modo somente leitura, com renderização própria de pastas raster em composição normal; é **experimental**, pode rejeitar arquivos ou camadas e não foi validado com os seus arquivos reais. A composição CLIP direta ainda não reproduz todos os modos, filtros, clippings e máscaras de pastas. Compare os PNGs com o Clip Studio antes de usá-los em trabalhos definitivos.
 
 ## Desenvolvimento
 
