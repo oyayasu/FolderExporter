@@ -44,7 +44,8 @@ def test_valid_filenames():
 def test_detect_top_groups_even_hidden():
     groups = list_top_level_groups(PSD([Group("A"), Group("B", visible=False)]))
     assert len(groups) == 2
-    assert groups[1].visible is False
+    assert groups[0].name == "B"
+    assert groups[0].visible is False
 
 def test_duplicate_folders_and_existing_file(tmp_path):
     groups = list_top_level_groups(PSD([Group("work"), Group("work"), Group("work")]))
@@ -110,3 +111,51 @@ def test_numbering_and_prefix(tmp_path):
     opts = Options(naming="prefix", prefix="sprite")
     assert [p.name for _, p in build_export_plan(groups, tmp_path, opts)] == [
         "sprite - 001.png", "sprite - 002.png"]
+
+def test_first_visual_folder_is_number_one(tmp_path):
+    # psd-tools fornece camadas em ordem fundo->topo.
+    psd = PSD([
+        Group("terceira", color=(0, 0, 255, 255)),
+        Group("segunda", color=(0, 255, 0, 255)),
+        Group("primeira", color=(255, 0, 0, 255)),
+    ])
+    folders = list_top_level_groups(psd)
+    assert [folder.name for folder in folders] == ["primeira", "segunda", "terceira"]
+    plan = build_export_plan(folders, tmp_path, Options(naming="number"))
+    assert [(folder.name, path.name) for folder, path in plan] == [
+        ("primeira", "001.png"), ("segunda", "002.png"), ("terceira", "003.png")]
+    result = export_groups(psd, folders, tmp_path, Options(naming="number"))
+    assert not result.failures
+    with Image.open(tmp_path / "001.png") as first:
+        assert first.getpixel((5, 6)) == (255, 0, 0, 255)
+    with Image.open(tmp_path / "003.png") as last:
+        assert last.getpixel((5, 6)) == (0, 0, 255, 255)
+
+def test_duplicate_names_first_visual_folder_gets_base_name(tmp_path):
+    psd = PSD([
+        Group("desenho", color=(5, 100, 15, 255)),
+        Group("desenho", color=(200, 50, 10, 255)),
+    ])
+    result = export_groups(psd, list_top_level_groups(psd), tmp_path, Options(naming="name"))
+    assert [file.name for file in result.created] == ["desenho.png", "desenho - 2.png"]
+    with Image.open(tmp_path / "desenho.png") as image:
+        assert image.getpixel((5, 6)) == (200, 50, 10, 255)
+    with Image.open(tmp_path / "desenho - 2.png") as image:
+        assert image.getpixel((5, 6)) == (5, 100, 15, 255)
+
+@pytest.mark.parametrize("fmt", ["PNG", "WEBP", "TIFF"])
+def test_optional_white_background_and_default_alpha(tmp_path, fmt):
+    psd = PSD([Group("drawing")])
+    opaque_dir = tmp_path / "opaque"
+    transparent_dir = tmp_path / "transparent"
+    opaque_dir.mkdir()
+    transparent_dir.mkdir()
+    export_groups(psd, list_top_level_groups(psd), opaque_dir, Options(format=fmt, white_background=True))
+    export_groups(psd, list_top_level_groups(psd), transparent_dir, Options(format=fmt))
+    ext = {"PNG": "png", "WEBP": "webp", "TIFF": "tif"}[fmt]
+    with Image.open(opaque_dir / f"drawing.{ext}") as im:
+        rgba = im.convert("RGBA")
+        assert rgba.getpixel((0, 0))[3] == 255
+        assert all(c >= 245 for c in rgba.getpixel((0, 0))[:3])
+    with Image.open(transparent_dir / f"drawing.{ext}") as im:
+        assert im.convert("RGBA").getpixel((0, 0))[3] == 0
