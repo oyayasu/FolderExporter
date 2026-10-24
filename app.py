@@ -7,7 +7,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from engine import Options, build_export_plan, export_groups, list_top_level_groups, load_psd, safe_stem
+from engine import Options, build_export_plan, export_groups, list_top_level_groups, load_project, safe_stem
 
 BG = "#f7f7f8"
 CARD = "#ffffff"
@@ -46,6 +46,7 @@ class Application(tk.Tk):
         self.quality_text = tk.StringVar(value="90")
         self.prefix = tk.StringVar(value="imagem")
         self.crop = tk.BooleanVar(value=False)
+        self.white_background = tk.BooleanVar(value=False)
         self.matte_text = tk.StringVar(value="Branco")
         self.destination_mode = tk.StringVar(value=DESTINATIONS[1])
         self.subfolder = tk.StringVar(value="Exportados")
@@ -105,13 +106,13 @@ class Application(tk.Tk):
         root = ttk.Frame(self, style="Page.TFrame", padding=(19, 14))
         root.pack(fill="both", expand=True)
         ttk.Label(root, text="FolderExporter", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(root, text="Uma pasta do PSD, uma imagem. Tudo em um clique.", style="Page.TLabel", foreground=MUTED).pack(anchor="w", pady=(2, 14))
+        ttk.Label(root, text="Uma pasta por imagem, na ordem da lista do Clip Studio.", style="Page.TLabel", foreground=MUTED).pack(anchor="w", pady=(2, 14))
 
         source = self._section(root, "01    Arquivo")
         line = ttk.Frame(source, style="Card.TFrame")
         line.pack(fill="x")
         ttk.Label(line, textvariable=self.source_text, style="Muted.TLabel").pack(side="left", fill="x", expand=True)
-        self.open_btn = ttk.Button(line, text="Abrir PSD/PSB", style="Secondary.TButton", command=self._choose)
+        self.open_btn = ttk.Button(line, text="Abrir PSD/CLIP", style="Secondary.TButton", command=self._choose)
         self.open_btn.pack(side="right")
 
         groups_card = self._section(root, "02    Pastas encontradas")
@@ -150,11 +151,15 @@ class Application(tk.Tk):
         ttk.Checkbutton(third, text="Recortar transparência", variable=self.crop, style="F.TCheckbutton").pack(side="left")
         self._label(third, "Fundo JPEG").pack(side="left", padx=(20, 7))
         self._combo(third, self.matte_text, ("Branco", "Preto"), 9)
+        ttk.Checkbutton(
+            opts, text="Fundo branco (remove a transparência de PNG, WebP e TIFF)",
+            variable=self.white_background, style="F.TCheckbutton"
+        ).pack(anchor="w", pady=(8, 0))
         custom = ttk.Frame(opts, style="Card.TFrame")
         custom.pack(fill="x", pady=(9, 0))
         self._label(custom, "Prefixo personalizado").pack(side="left", padx=(0, 10))
         ttk.Entry(custom, textvariable=self.prefix, width=22, style="F.TEntry").pack(side="left", fill="x", expand=True)
-        self._label(opts, "PNG, WebP e TIFF preservam transparência; JPEG não.", muted=True).pack(anchor="w", pady=(8, 0))
+        self._label(opts, "Fundo branco é opcional; JPEG sempre usa fundo opaco.", muted=True).pack(anchor="w", pady=(8, 0))
 
         dest = self._section(root, "04    Destino")
         route = ttk.Frame(dest, style="Card.TFrame")
@@ -182,21 +187,21 @@ class Application(tk.Tk):
         self.progress.pack(fill="x", pady=(9, 0))
 
     def _choose(self):
-        path = filedialog.askopenfilename(title="Abrir PSD/PSB", filetypes=[("Arquivos Photoshop", "*.psd *.psb"), ("Todos", "*.*")])
+        path = filedialog.askopenfilename(title="Abrir PSD, PSB ou CLIP", filetypes=[("Projetos compatíveis", "*.psd *.psb *.clip"), ("Photoshop", "*.psd *.psb"), ("Clip Studio", "*.clip"), ("Todos", "*.*")])
         if path:
             self._open(Path(path))
 
     def _open(self, path):
         if self._busy():
             return
-        if path.suffix.lower() not in (".psd", ".psb") or not path.is_file():
-            messagebox.showerror("Arquivo inválido", "Selecione um arquivo PSD ou PSB existente.")
+        if path.suffix.lower() not in (".psd", ".psb", ".clip") or not path.is_file():
+            messagebox.showerror("Arquivo inválido", "Selecione um PSD, PSB ou CLIP existente.")
             return
         self.open_btn.configure(state="disabled")
         self.status.set("Lendo camadas...")
         def work():
             try:
-                doc = load_psd(path)
+                doc = load_project(path)
                 self.events.put(("loaded", (path, doc, list_top_level_groups(doc))))
             except Exception as exc:
                 self.events.put(("error_open", str(exc)))
@@ -247,11 +252,11 @@ class Application(tk.Tk):
             crop=self.crop.get(), scale=int(self.scale_text.get()),
             quality=int(self.quality_text.get()),
             matte="black" if self.matte_text.get() == "Preto" else "white",
-            prefix=self.prefix.get())
+            prefix=self.prefix.get(), white_background=self.white_background.get())
 
     def _destination(self):
         if self.source is None:
-            raise ValueError("Abra um PSD primeiro.")
+            raise ValueError("Abra um PSD, PSB ou CLIP primeiro.")
         mode = self.destination_mode.get()
         if mode == DESTINATIONS[0]:
             return self.source.parent
@@ -286,7 +291,7 @@ class Application(tk.Tk):
             return
         try:
             if self.psd is None:
-                raise ValueError("Abra um PSD/PSB primeiro.")
+                raise ValueError("Abra um PSD/PSB/CLIP primeiro.")
             folders = [g for i, g in enumerate(self.folders) if i in self.selected]
             if not folders:
                 raise ValueError("Selecione pelo menos uma pasta.")
@@ -306,8 +311,11 @@ class Application(tk.Tk):
         self.status.set("Exportando...")
         def work():
             try:
+                # ClipFile mantém caches nativos associados à thread: cada exportação abre
+                # outro leitor SOMENTE LEITURA dentro da thread que vai renderizar.
+                doc = load_project(self.source) if self.source.suffix.lower() == ".clip" else self.psd
                 result = export_groups(
-                    self.psd, folders, destination, options,
+                    doc, folders, destination, options,
                     progress=lambda current, total, name, outcome: self.events.put(("progress", (current, total, name, outcome))),
                     cancel=self.cancel)
                 self.events.put(("done", (result, destination)))
@@ -324,7 +332,8 @@ class Application(tk.Tk):
                     self.source, self.psd, self.folders = payload
                     self.selected = set(range(len(self.folders)))
                     self.source_text.set(self.source.name)
-                    self.status.set(f"{self.psd.width} × {self.psd.height} px · {len(self.folders)} pastas")
+                    format_label = "CLIP (experimental)" if self.source.suffix.lower() == ".clip" else "PSD"
+                    self.status.set(f"{format_label} · {self.psd.width} × {self.psd.height} px · {len(self.folders)} pastas")
                     self.open_btn.configure(state="normal")
                     self._redraw()
                     if not self.folders:
