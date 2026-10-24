@@ -7,6 +7,7 @@ on:
     paths:
       - "app.py"
       - "engine.py"
+      - "clip_support.py"
       - "requirements.txt"
       - "tests/**"
       - ".github/workflows/build.yml"
