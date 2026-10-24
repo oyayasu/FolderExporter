@@ -49,7 +49,7 @@ jobs:
         shell: pwsh
         run: python -c "from app import Application; window = Application(); window.update_idletasks(); window.destroy()"
       - name: Build standalone application
-        run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name FolderExporter --collect-all psd_tools app.py
+        run: python -m PyInstaller --noconfirm --clean --windowed --onedir --name FolderExporter --collect-all psd_tools --collect-all clipparse app.py
       - name: Create macOS disk image
         if: matrix.platform == 'macos'
         shell: bash
