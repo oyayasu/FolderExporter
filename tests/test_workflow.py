@@ -5,7 +5,7 @@ import pytest
 from PIL import Image
 
 from engine import Options
-from workflow import (Node, Naming, folder_tree, discover_drawings,
+from export_planner import (Node, Naming, folder_tree, discover_drawings,
                       make_plan, export_plan, drawing_name)
 
 
