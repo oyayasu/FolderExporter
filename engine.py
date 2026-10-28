@@ -122,7 +122,24 @@ def render_group(psd: Any, group: Any, crop: bool) -> Image.Image:
         return render_folder(psd, int(group), crop)
     width, height = int(psd.width), int(psd.height)
     if width <= 0 or height <= 0:
-        raise ExportError("O documento tem dimensões inválidas.")
+        raise ExportError("Invalid document dimensions.")
+    # Render selected group in isolation at full-canvas coordinates. This works for
+    # nested groups and does not depend on their parents' visibility.
+    if hasattr(group, "composite"):
+        source = group.composite(viewport=(0, 0, width, height),
+                                 force=True, alpha=0.0, color=1.0)
+        if source is None:
+            raise ExportError("Unable to render this drawing folder.")
+        image = source.convert("RGBA")
+        if image is not source:
+            source.close()
+        if crop:
+            bounds = image.getchannel("A").getbbox()
+            if bounds:
+                result = image.crop(bounds)
+                image.close()
+                return result
+        return image
     was_visible = bool(group.visible)
     try:
         group.visible = True  # somente em memória
