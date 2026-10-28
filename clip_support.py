@@ -24,13 +24,13 @@ def open_clip(path: Path) -> ClipProject:
         import clipparse
         reader = clipparse.ClipFile()
         if not reader.load(str(path)):
-            raise ValueError(getattr(reader, "error", "O leitor CLIP rejeitou o arquivo."))
+            raise ValueError(getattr(reader, "error", "The CLIP reader rejected this file."))
         width, height = int(reader.width), int(reader.height)
         if width <= 0 or height <= 0:
-            raise ValueError("Dimensões inválidas do CLIP.")
+            raise ValueError("Invalid CLIP canvas dimensions.")
         return ClipProject(reader, Path(path), width, height)
     except Exception as exc:
-        raise ValueError(f"Não foi possível ler o arquivo .clip: {exc}") from exc
+        raise ValueError(f"Could not read the .clip file: {exc}") from exc
 
 def top_groups(project: ClipProject) -> list[tuple[int, str, bool]]:
     reader = project.file
@@ -53,7 +53,7 @@ def render_folder(project: ClipProject, folder_index: int, crop: bool = False) -
     """Renderiza um grupo isolado com mistura normal; não toca o arquivo original."""
     reader = project.file
     if not reader.layers[folder_index].is_group:
-        raise ValueError("A seleção não é uma pasta.")
+        raise ValueError("The selection is not a folder.")
     width, height = project.width, project.height
 
     def compose_group(index: int, force_visible: bool = False) -> Image.Image:
@@ -61,14 +61,14 @@ def render_folder(project: ClipProject, folder_index: int, crop: bool = False) -
         if not force_visible and not layer.visible:
             return Image.new("RGBA", (width, height))
         if layer.is_filter:
-            raise ValueError("Esta pasta possui camada de ajuste não suportada no CLIP direto; use PSD.")
+            raise ValueError("This folder has adjustment layers unsupported by direct CLIP export; use PSD.")
         if layer.clipping:
-            raise ValueError("Esta pasta possui recorte por camada não suportado no CLIP direto; use PSD.")
+            raise ValueError("This folder has clipping layers unsupported by direct CLIP export; use PSD.")
         if layer.is_group:
             if layer.has_mask:
-                raise ValueError("Máscara de pasta não suportada no CLIP direto; use PSD.")
+                raise ValueError("Folder masks are unsupported by direct CLIP export; use PSD.")
             if layer.composite_raw not in (0, 30):
-                raise ValueError("Modo de mesclagem de pasta não suportado no CLIP direto; use PSD.")
+                raise ValueError("Folder blend mode is unsupported by direct CLIP export; use PSD.")
             result = Image.new("RGBA", (width, height), (0, 0, 0, 0))
             for child_index in reader.children(index):
                 child_image = compose_group(child_index)
@@ -76,13 +76,13 @@ def render_folder(project: ClipProject, folder_index: int, crop: bool = False) -
                 child_image.close()
         else:
             if layer.composite_raw != 0:
-                raise ValueError("Esta pasta usa um modo de mesclagem não suportado no CLIP direto; use PSD.")
+                raise ValueError("This folder uses an unsupported blend mode; use PSD.")
             if layer.width <= 0 or layer.height <= 0:
-                raise ValueError("Camada sem pixels rasterizáveis no CLIP direto; use PSD.")
+                raise ValueError("A layer has no raster pixels for direct CLIP export; use PSD.")
             data = reader.layer_image(index, "masked")
             expected = int(layer.width) * int(layer.height) * 4
             if len(data) != expected:
-                raise ValueError("Pixels não disponíveis nessa camada CLIP; use PSD.")
+                raise ValueError("Layer pixels are unavailable in this CLIP file; use PSD.")
             piece = Image.frombytes("RGBA", (int(layer.width), int(layer.height)), data, "raw", "BGRA")
             result = Image.new("RGBA", (width, height), (0, 0, 0, 0))
             result.paste(piece, (int(layer.left), int(layer.top)))
