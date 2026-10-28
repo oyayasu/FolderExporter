@@ -53,7 +53,7 @@ def load_psd(path: Path) -> Any:
         from psd_tools import PSDImage
         return PSDImage.open(str(path))
     except Exception as exc:
-        raise ExportError(f"Não foi possível abrir o PSD/PSB: {exc}") from exc
+        raise ExportError(f"Could not open PSD/PSB: {exc}") from exc
 
 def load_project(path: Path) -> Any:
     """Apenas lê o arquivo de origem. Nunca chama save() no PSD/CLIP."""
@@ -63,7 +63,7 @@ def load_project(path: Path) -> Any:
         return open_clip(path)
     if path.suffix.lower() in (".psd", ".psb"):
         return load_psd(path)
-    raise ExportError("Formato de origem inválido. Use PSD, PSB ou CLIP.")
+    raise ExportError("Unsupported source format. Use PSD, PSB or CLIP.")
 
 def list_top_level_groups(psd: Any) -> list[Folder]:
     if getattr(psd, "is_clip", False):
@@ -93,7 +93,7 @@ def stem_for(folder: Folder, index: int, total: int, options: Options) -> str:
         return safe_stem(f"{name} - {number}")
     if options.naming == "prefix":
         return safe_stem(f"{safe_stem(options.prefix)} - {number}")
-    raise ExportError("Tipo de nomenclatura inválido.")
+    raise ExportError("Invalid filename format.")
 
 def next_available_path(destination: Path, stem: str, ext: str, used: set[str]) -> Path:
     number = 1
@@ -109,7 +109,7 @@ def next_available_path(destination: Path, stem: str, ext: str, used: set[str]) 
 def build_export_plan(folders: Iterable[Folder], destination: Path, options: Options) -> list[tuple[Folder, Path]]:
     selected = list(folders)
     if options.format.upper() not in EXT:
-        raise ExportError("Formato de saída não suportado.")
+        raise ExportError("Unsupported output format.")
     used: set[str] = set()
     return [
         (folder, next_available_path(destination, stem_for(folder, i, len(selected), options), EXT[options.format.upper()], used))
@@ -157,7 +157,7 @@ def render_group(psd: Any, group: Any, crop: bool) -> Image.Image:
     finally:
         group.visible = was_visible
     if result is None:
-        raise ExportError("Não foi possível renderizar esta pasta.")
+        raise ExportError("Unable to render this folder.")
     image = result.convert("RGBA")
     if image is not result:
         result.close()
@@ -171,7 +171,7 @@ def render_group(psd: Any, group: Any, crop: bool) -> Image.Image:
 
 def prepare_image(image: Image.Image, options: Options) -> Image.Image:
     if not 10 <= options.scale <= 400:
-        raise ExportError("A escala deve estar entre 10% e 400%.")
+        raise ExportError("Scale must be between 10% and 400%.")
     if options.scale != 100:
         size = (max(1, round(image.width * options.scale / 100)),
                 max(1, round(image.height * options.scale / 100)))
@@ -212,10 +212,10 @@ def export_groups(
 ) -> ExportResult:
     dest = Path(destination)
     if not dest.is_dir():
-        raise ExportError("Selecione uma pasta de destino existente.")
+        raise ExportError("Choose an existing destination folder.")
     selected = list(folders)
     if not selected:
-        raise ExportError("Selecione pelo menos uma pasta.")
+        raise ExportError("Select at least one drawing folder.")
     plan = build_export_plan(selected, dest, options)
     created: list[Path] = []
     failures: list[tuple[str, str]] = []
