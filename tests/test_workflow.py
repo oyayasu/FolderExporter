@@ -32,7 +32,7 @@ def test_chapters_are_organizational_and_duplicates_stay_in_separate_directories
     tasks = make_plan(drawings, {d.key for d in drawings}, tmp_path,
                       Naming(mode="Format", custom="Drawing", start=1),
                       Options(), True)
-    assert [str(task.path.relative_to(tmp_path)) for task in tasks] == [
+    assert [task.path.relative_to(tmp_path).as_posix() for task in tasks] == [
         "Chapter 3/Drawing - 001.png", "Chapter 3/Drawing - 002.png",
         "Chapter 3/Drawing - 003.png", "Chapter 12/Drawing - 001.png",
         "Chapter 12/Drawing - 002.png",
@@ -43,7 +43,7 @@ def test_name_only_and_duplicate_names_are_safe(tmp_path):
     drawings = discover_drawings(structure(), "chapter")
     tasks = make_plan(drawings, {d.key for d in drawings}, tmp_path,
                       Naming(kind="Name Only"), Options())
-    assert [str(task.path.relative_to(tmp_path)) for task in tasks] == [
+    assert [task.path.relative_to(tmp_path).as_posix() for task in tasks] == [
         "Chapter 3/1.png", "Chapter 3/2.png", "Chapter 3/3.png",
         "Chapter 12/1.png", "Chapter 12/2.png",
     ]
