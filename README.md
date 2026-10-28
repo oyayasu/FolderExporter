@@ -1,46 +1,74 @@
 # FolderExporter
 
-Exporta cada pasta principal de um **PSD/PSB** ou **CLIP** como imagem individual, na ordem visual de cima para baixo, sem modificar o projeto original.
+A tiny, **Windows 95/98-inspired** desktop tool for exporting drawing folders from Clip Studio Paint and Photoshop projects as individual images.
 
-**Windows e macOS:** a aba [Actions](https://github.com/oyayasu/FolderExporter/actions) gera os aplicativos independentes. Quem usa o aplicativo **não precisa instalar Python**.
+**No Python installation is needed** to run the packaged macOS or Windows app.
 
-## Recursos
+## Workflow
 
-- Cada grupo principal vira um arquivo independente, incluindo grupos ocultos, na **mesma ordem visual do Clip Studio**: a pasta de cima é sempre a imagem 001.
-- Importação direta de arquivos `.clip` em modo **experimental** para pastas de camadas raster normais, usando `clipparse`.
-- Formatos: PNG, WebP, TIFF e JPEG.
-- Nomes originais, numeração, ou combinação dos dois.
-- Nomes repetidos recebem ` - 2`, ` - 3`, etc.; arquivos anteriores nunca são sobrescritos.
-- Exportar na pasta original, em subpasta própria ou em destino escolhido.
-- Tela completa ou recorte do conteúdo, escala, qualidade e fundo de JPEG.
-- **Fundo branco opcional** para PNG, WebP e TIFF: desligado por padrão, mantendo transparência.
-- Seleção de grupos, progresso e cancelamento.
+1. Choose a source `.psd`, `.psb`, or (experimental) `.clip` document.
+2. The left side shows **01 File** and **02 Folders Found** in separate classic boxes.
+3. Type comma-separated organizational folder keywords (default: `chapter, section`).
+4. Folders containing those words are **not** exported as drawings. Their drawing folders are discovered recursively.
+5. Select drawing folders; each chapter retains its own output directory.
+6. Customize the format, background, output destination and Finder-style names on the right.
+7. Click **Export All**, always visible in the fixed bottom bar.
 
-## Baixar
+Example:
 
-Abra **Actions → Build Windows and macOS → última execução verde → Artifacts**. As versões do programa **não exigem instalar Python**.
+```text
+Clip Studio Project
+├── Chapter 3
+│   ├── 1
+│   ├── 2
+│   └── 3
+└── Chapter 12
+    ├── 1
+    └── 2
 
-### Windows 10/11
-1. Baixe `FolderExporter-Windows-x64` (um único arquivo ZIP do GitHub).
-2. Extraia o ZIP **completo** para uma pasta.
-3. Execute `FolderExporter.exe` e mantenha a pasta `_internal` ao lado dele. Não execute o EXE de dentro do ZIP.
+FolderExporter Exports
+├── Chapter 3
+│   ├── 1.png
+│   ├── 2.png
+│   └── 3.png
+└── Chapter 12
+    ├── 1.png
+    └── 2.png
+```
 
-### macOS Intel ou Apple Silicon
-1. Baixe o artifact de arquitetura correspondente. O ZIP do GitHub contém um arquivo `.dmg`, e **não outro ZIP**.
-2. Extraia o ZIP, abra o `.dmg` e copie `FolderExporter.app` para Aplicativos.
-3. O aplicativo ainda não é assinado/notarizado. Caso o macOS bloqueie a abertura, confira **Ajustes do Sistema → Privacidade e Segurança**, em vez de desativar o Gatekeeper globalmente.
+The original top-to-bottom layer order is retained. Identically named drawings from different chapters can keep their names.
 
-### Importante
-- Arquivos existentes não são substituídos; nomes repetidos ganham sufixos ` - 2`, ` - 3` etc.
-- **Segurança da origem:** o aplicativo apenas lê os projetos. Não chama métodos `save()` de PSD nem instancia `ClipWriter`; grava exclusivamente arquivos de saída e, quando escolhida, a pasta de saída.
-- Na importação direta `.clip`, máscaras de pasta, recortes, ajustes e modos avançados de mesclagem são recusados com erro de exportação em vez de criar imagem sabidamente incompleta. Para esses casos, use PSD.
-- O GitHub testa o núcleo de exportação e verifica a inicialização da janela no Windows.
-- Ainda é necessário validar o resultado com PSDs reais exportados pelo Clip Studio.
+## Naming like Finder
 
-## Limitação
+- **Format:** Name Only, Name and Index, Name and Counter, Name and Date.
+- **Add Text:** add a custom string before or after the original folder name.
+- **Replace Text:** find a string and replace it in the original folder name.
+- Custom prefix/format, starting number, padding, placement, separator and numbering reset per chapter.
+- The preview shows the **actual paths** that will be created before export.
+- Existing images are never overwritten: a colliding name gets ` - 2`, ` - 3`, etc.
 
-O motor PSD usa `psd-tools` para renderizar grupos. Alguns filtros, máscaras e modos de mesclagem exclusivos do Photoshop/Clip Studio podem não ser reproduzidos perfeitamente. O leitor CLIP direto usa `clipparse==0.2.0` em modo somente leitura, com renderização própria de pastas raster em composição normal; é **experimental**, pode rejeitar arquivos ou camadas e não foi validado com os seus arquivos reais. A composição CLIP direta ainda não reproduz todos os modos, filtros, clippings e máscaras de pastas. Compare os PNGs com o Clip Studio antes de usá-los em trabalhos definitivos.
+## Export options
 
-## Desenvolvimento
+PNG, WebP, TIFF and JPEG; scale, JPEG/WebP quality, crop to drawing bounds, optional opaque white background, JPEG matte and choice of destination. Transparent PNG/WebP/TIFF is the default.
 
-Somente para quem quiser desenvolver: `pip install -r requirements.txt` e `python app.py`. O GitHub Actions instala as dependências automaticamente durante a compilação.
+## Original files are read-only
+
+Opening PSD/PSB/CLIP only loads and interprets the data. The app does not call source save/write methods, edit source layers or overwrite existing files. Only *new* exports are written into the chosen output location.
+
+**PSD files are recommended.** Direct `.clip` rendering is experimental and may reject folders using masks, advanced blend modes, clipping, vector-only contents or adjustments. Such folders should be exported through PSD. Compare complex exports against Clip Studio.
+
+The standalone build bundles the open-source `psd-tools` and `clipparse` readers. No source file is converted or rewritten.
+
+## Download
+
+In [GitHub Actions](https://github.com/oyayasu/FolderExporter/actions), open the latest **successful** "Build Windows and macOS" run and download the artifact for your architecture.
+
+- **Windows x64:** extract the GitHub ZIP and run `FolderExporter.exe` with the `_internal` folder beside it.
+- **Mac Apple Silicon:** extract the ZIP, open the enclosed `.dmg` and drag `FolderExporter.app` into Applications.
+- **Mac Intel:** use the Intel artifact instead.
+
+The macOS app isn't signed/notarized. If macOS blocks its first launch, authorize it in System Settings > Privacy & Security.
+
+## Building from source
+
+Development-only: `pip install -r requirements.txt pytest` then `python app.py`. GitHub Actions installs and packages these dependencies for end users.
