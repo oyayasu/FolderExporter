@@ -8,6 +8,8 @@ on:
       - "app.py"
       - "engine.py"
       - "clip_support.py"
+      - "workflow.py"
+      - "retro_ui.py"
       - "requirements.txt"
       - "tests/**"
       - ".github/workflows/build.yml"
