@@ -10,7 +10,7 @@ from tkinter import filedialog, messagebox, ttk
 import tkinter.font as tkfont
 
 from engine import Options, load_project
-from workflow import (Naming, folder_tree, discover_drawings, is_organizer,
+from export_planner import (Naming, folder_tree, discover_drawings, is_organizer,
                       make_plan, export_plan, safe_stem)
 
 FACE = "#C0C0C0"
