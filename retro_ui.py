@@ -77,7 +77,7 @@ class Application(tk.Tk):
         self.jpeg_background = tk.StringVar(value="White")
         self.destination = tk.StringVar(value="")
         self.naming_mode = tk.StringVar(value="Format")
-        self.naming_kind = tk.StringVar(value="Name and Index")
+        self.naming_kind = tk.StringVar(value="Name Only")
         self.naming_custom = tk.StringVar(value="Drawing")
         self.naming_where = tk.StringVar(value="after")
         self.naming_start = tk.StringVar(value="1")
